@@ -1,0 +1,152 @@
+#定义环境变量
+variables:
+  ############必须配置############
+  #项目名称即git名称
+  projectName: $CI_PROJECT_NAME
+  #jar名称
+  jarFileName: '${CI_PROJECT_NAME}.jar'
+  #git idea 拉代码的git地址
+  gitUrl: $CI_REPOSITORY_URL
+  #工程所在目录
+  baseDir: '/usr/project/${CI_PROJECT_NAME}'
+  ############选配############
+  #打包所在目录git
+  buildDir: '/usr/project/${CI_PROJECT_NAME}/build/'
+  #打包环境
+  branch: $CI_COMMIT_REF_NAME
+  #前端文件夹路径
+  buildUiDir: '/usr/project/${CI_PROJECT_NAME}/build/${CI_PROJECT_NAME}/ui'
+  #远程服务器nginx地址
+  nginxUrl: '/app/smart-ql-pims-large/nginx'
+  #脚本路径
+  buildShDir: '/usr/project/${CI_PROJECT_NAME}/build/${CI_PROJECT_NAME}/deploy'
+  #test工程所在目录
+  testBaseDir: '/app/smart-ql-pims-large'
+  #test-jar名称
+  testJarFileName: '${CI_PROJECT_NAME}.jar'
+
+stages:
+  - check
+  - pullCode
+  - package
+  - deploy
+
+#项目检查
+check:
+  stage: check
+  only:
+    changes:
+      - sdrc-*/**/*
+      - "*.xml"
+  except:
+    - master@smart-ql-pims-large/smart-ql-pims-large
+  script:
+    - echo "=============== 开始检后台代码查任务  ==============="
+    - mvn clean
+    - mvn install
+    - mvn checkstyle:check -Dmaven.test.skip=true
+    - mvn compile findbugs:check -Dmaven.test.skip=true
+  tags:
+    - smart-ql-pims
+
+  #项目获取
+pullCode:
+  stage: pullCode
+  only:
+    - master@smart-ql-pims-large/smart-ql-pims-large
+  tags:
+    - smart-ql-pims
+  script:
+    - echo "=============== 开始打包任务  ==============="
+    - if [ '0' != $? ]; then cd ${buildDir}/${projectName} ; git remote rm origin ; exit 0; fi
+    - if [ ! -e $baseDir ]; then mkdir -p $baseDir ; fi
+    - if [ ! -e $buildDir ]; then  mkdir -p $buildDir; fi
+    - cd $buildDir
+    - if [ -e $projectName ]; then rm -rf ${buildDir}/${projectName}; fi
+    - git clone $gitUrl
+    - if [ '0' != $? ]; then echo "注意：更新发生错误！" ; exit 1; fi
+    - cd $projectName
+    - git checkout $branch
+    - if [ '0' != $? ]; then echo "注意：切换分支发生错误！"; exit 1;fi
+
+##后台项目打包
+package:
+  stage: package
+  only:
+    refs:
+      - master@smart-ql-pims-large/smart-ql-pims-large
+    changes:
+      - sdrc-*/**/*
+      - "*.xml"
+  tags:
+    - smart-ql-pims
+  script:
+    - echo "=============== 开始后端打包任务  ==============="
+    - cd $buildDir$projectName
+    - echo "=============== $buildDir $projectName  ==============="
+    - mvn clean package -Dmaven.test.skip=true
+    - if [ -e $baseDir/$jarFileName ]; then cp ${baseDir}/${jarFileName} ${baseDir}/${jarFileName}.backup; fi
+    - cp $buildDir/${CI_PROJECT_NAME}/sdrc-admin/target/$jarFileName $baseDir/$jarFileName
+
+  #后端部署
+deploy:
+  stage: deploy
+  tags:
+    - smart-ql-pims
+  needs: [ package ]
+  only:
+    refs:
+      - master@smart-ql-pims-large/smart-ql-pims-large
+    changes:
+      - sdrc-*/**/*
+      - "*.xml"
+  script:
+    - echo "=============== 开始后端部署任务  ==============="
+    # 测试，是否能够通过 ssh 连通远程服务器
+    - sshpass -p 'Zhql123!' ssh -o StrictHostKeychecking=no root@10.255.2.58
+    - echo "===============  将 war和sh脚本 包部署到远程服务器上  ==============="
+    - sshpass -p 'Zhql123!' scp -o StrictHostKeychecking=no $baseDir/$jarFileName root@10.255.2.58:$testBaseDir/$testJarFileName
+    - echo "=============== 开始执行  ==============="
+    # 启动项目
+    - sshpass -p 'Zhql123!' ssh -o StrictHostKeychecking=no root@10.255.2.58 " cd $testBaseDir/bin && sh startup.sh"
+
+##前端管理平台打包
+packageUI:
+  stage: package
+  only:
+    refs:
+      - master@smart-ql-pims-large/smart-ql-pims-large
+    changes:
+      - ui/**/*
+  tags:
+    - smart-ql-pims
+  script:
+    - echo "=============== 开始UI前端打包任务  ==============="
+    - if [ ! -e $buildUiDir ]; then echo "注意：前端项目文件夹缺失！" ; exit 1 ; fi
+    - cd $buildUiDir
+    - npm install --unsafe-perm --registry=https://registry.npm.taobao.org
+    - npm run build
+    - tar -cvf dist.tar dist
+
+  #前端部署
+deployUI:
+  stage: deploy
+  tags:
+    - smart-ql-pims
+  needs: [ packageUI ]
+  only:
+    refs:
+      - master@smart-ql-pims-large/smart-ql-pims-large
+    changes:
+      - ui/**/*
+  script:
+    - echo "=============== 开始前端部署任务  ==============="
+    # 测试，是否能够通过 ssh 连通远程服务器
+    - sshpass -p 'Zhql123!' ssh -o StrictHostKeychecking=no root@10.255.2.58
+    #复制编译文件，到nginx
+    - sshpass -p 'Zhql123!' scp -o StrictHostKeychecking=no $buildUiDir/dist.tar root@10.255.2.58:$nginxUrl
+    #  解压文件,重启nginx
+    - sshpass -p 'Zhql123!' ssh -o StrictHostKeychecking=no root@10.255.2.58 "cd $nginxUrl && rm -rf dist && tar -xvf dist.tar && rm -rf html/* && mv -f dist/* html && $nginxUrl/sbin/nginx -s reload"
+
+
+

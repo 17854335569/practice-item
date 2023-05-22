@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!--配置忽略的包,除去业务代码manage包-->
+    <Match>
+        <Package name="~.*\.common\..*" />
+    </Match>
+    <Match>
+        <Package name="~.*\.framework\..*" />
+    </Match>
+    <Match>
+        <Package name="~.*\.generator\..*" />
+    </Match>
+    <Match>
+        <Package name="~.*\.job\..*" />
+    </Match>
+    <Match>
+        <Package name="~.*\.oss\..*" />
+    </Match>
+    <Match>
+        <Package name="~.*\.system\..*" />
+    </Match>
+    <Match>
+        <Package name="~.*\.manage\.apiproxy\.domain\..*" />
+    </Match>
+    <Match>
+        <Package name="com.sdrc.manage.apiproxy.domain" />
+    </Match>
+    <!--配置忽略的类-->
+    <Match>
+        <Class name="com.sdrc.manage.bim.util.BamboocloudUtils" />
+    </Match>
+    <Match>
+        <Class name="com.sdrc.manage.apiproxy.domain.vo.ApiLogVo" />
+    </Match>
+    <Match>
+        <Class name="com.sdrc.manage.apiproxy.domain.vo.AppAuthorizationVo" />
+    </Match>
+    <Match>
+        <Class name="com.sdrc.web.controller.system.SysWeixinLoginController" />
+    </Match>
+    <Match>
+        <Class name="com.sdrc.web.controller.system.SyszhihuiLoginController" />
+    </Match>
+    <Match>
+        <Class name="com.sdrc.web.controller.system.SysSsoLoginController" />
+    </Match>
+    <Match>
+        <Class name="com.sdrc.web.controller.system.SyncUserController" />
+    </Match>
+    <Match>
+        <Class name="com.anji.captcha.service.impl.BlockPuzzleCaptchaServiceImpl" />
+    </Match>
+</FindBugsFilter>

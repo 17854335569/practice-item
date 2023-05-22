@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Puppy Crawl//DTD Suppressions 1.0//EN"
+        "http://www.puppycrawl.com/dtds/suppressions_1_0.dtd">
+<suppressions>
+    <!--配置忽略的包,除去业务代码manage包-->
+    <suppress checks=""
+              files="\\sdrc-admin"/>
+    <suppress checks=""
+              files="\\sdrc-common"/>
+    <suppress checks=""
+              files="\\sdrc-framework"/>
+    <suppress checks=""
+              files="\\sdrc-generator"/>
+    <suppress checks=""
+              files="\\sdrc-job"/>
+    <suppress checks=""
+              files="\\sdrc-oss"/>
+    <suppress checks=""
+              files="\\sdrc-system"/>
+    <suppress checks=""
+              files="BamboocloudUtils.java"/>
+</suppressions>
